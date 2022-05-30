@@ -1,3 +1,9 @@
 .idea/
 bin/
 cmake-*/
+*.o
+*.bin
+*.elf
+*.a
+
+vmlinux.h

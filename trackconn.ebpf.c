@@ -20,17 +20,17 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
     struct connect_evnt *valEvnt = { 0 };
 
     // get task struct
-    struct task_struct *task = bpf_get_current_task();
+    struct task_struct *task = (struct task_struct *) bpf_get_current_task();
 
     // create empty event to map, then lookup
     // it will never be updated by another process since exit trace will be triggered and send out
-    err = bpf_map_update_elem(&connect_maps, task->pid, &nEvnt, BPF_ANY);
+    err = bpf_map_update_elem(&connect_maps, &task->pid, &nEvnt, BPF_ANY);
     if (err) {
         return 0;
     }
 
     // get sockaddr
-    valEvnt = bpf_map_lookup_elem(&connect_maps, task->pid);
+    valEvnt = bpf_map_lookup_elem(&connect_maps, &task->pid);
     if (!valEvnt) {
         // create failed, error
         return 0;
