@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 project(ebpf_snack_trackdns C)
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
 
-add_executable(ebpf_snack_trackdns trackconn.ebpf.c)
+add_executable(ebpf_snack_trackdns trackconn.ebpf.c trackconn.c trackconn.h trackconn.ebpf.h)
