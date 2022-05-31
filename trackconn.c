@@ -19,9 +19,43 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // set error and debug info callback
     libbpf_set_print(print_libbpf_log);
 
-    // load BPF program in userspace
+    //  open bpf appli
+    struct trackconn_ebpf *skel;
+    struct perf_buffer_opts pb_opts;
+    struct perf_buffer *pb;
+
+    skel = trackconn_ebpf__open();
+    if (!skel) {
+        fprintf(stderr, "Failed to open eBPF program\n");
+        return 1;
+    }
+
+    // load and verify
+    err = trackconn_ebpf__load(skel);
+    if (err) {
+        fprintf(stderr, "failed to load and verify eBPF program\n");
+        goto cleanup;
+    }
+
+    // attach to tp handler
+    err = trackconn_ebpf__attach(skel);
+    if (err) {
+        fprintf(stderr, "failed to attach to tp handler\n");
+        goto cleanup;
+    }
+
+    // setup evnt callbacks
+    pb_opts.sample_cb = handle_events;
+
+cleanup:
+    perf_buffer__free(pb);
+    trackconn_ebpf__destroy(skel);
+    return err;
+
+
 
 }
 
@@ -32,4 +66,15 @@ int print_libbpf_log(enum libbpf_print_level level, const char *format, va_list 
         return 0;
     }
     return 1;
+}
+
+void handle_lost_events(void *ctz, int cpu, __u64 lost_cnt) {
+    fprintf(stderr, "lost %llu events on CPU %d\n", lost_cnt, cpu);
+}
+
+
+void handle_event(void *ctx, int cpu, void *data, __u32 data_sz) {
+    // https://elixir.bootlin.com/linux/latest/source/tools/bpf/bpftool/map_perf_ring.c#L39
+
+
 }

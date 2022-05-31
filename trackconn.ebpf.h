@@ -53,9 +53,9 @@ struct socket_evnt {
 
 struct connect_evnt {
     // --------------------------- PUBLIC PART
-    __u64 ts_us;
     // evnt type for parse
     __u16 evnt_type;  // 1 - socket, 2 - connect
+    __u64 ts_us;
     // 32 bit
     __u32 pid;
     __u32 ppid;
@@ -81,7 +81,14 @@ struct {
     __uint(key_size, sizeof(int));
     __uint(value_size, sizeof(__u32));  // must be u32, perf event fd in perf ring buffer
     __uint(max_entries, 0);  // useless, set to 0 if you do not pass anything from usersapce to kernel
-} events  SEC(".maps");
+} c_p_events  SEC(".maps");
+
+struct {
+    __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+    __uint(key_size, sizeof(int));
+    __uint(value_size, sizeof(__u32));  // must be u32, perf event fd in perf ring buffer
+    __uint(max_entries, 0);  // useless, set to 0 if you do not pass anything from usersapce to kernel
+} s_p_events  SEC(".maps");
 
 // define hash-map with event connect and socket
 struct {
