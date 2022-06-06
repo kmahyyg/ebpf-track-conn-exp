@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # increase memlock limit
-ulimit -l unlimited
+sudo ulimit -l unlimited
 
 # increase max file descriptors if possible
-ulimit -n unlimited
+sudo ulimit -n unlimited
 
 # mount debugfs to /sys/kernel/debug
-mount -t debugfs debugfs /sys/kernel/debug
+sudo mount -t debugfs debugfs /sys/kernel/debug
 
 # check if /proc/kallsyms exists, then echo result
 if [ -f /proc/kallsyms ]; then
