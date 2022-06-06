@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
 
     // poll events
     // two threads for that.
-    pthread_t tid_s, tid_c;
+    pthread_t tid_s;
 
     // thread 1 for socket
     struct poll_pbuf_event_data *pped_s = malloc(sizeof poll_pbuf_event_data_ptype);
@@ -96,6 +96,7 @@ int main(int argc, char **argv) {
 cleanup:
     perf_buffer__free(pb_s);
     perf_buffer__free(pb_c);
+    pthread_cancel(tid_s);
     trackconn_ebpf__destroy(skel);
     printf("program exited, errcode: %d\n", err);
     pthread_exit(0);
