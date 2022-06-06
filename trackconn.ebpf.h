@@ -20,14 +20,10 @@
 
 #define AF_INET 2
 
-static const __u16 YCUSTOM_EVNT_TYPE_SOCKET = 1;
-static const __u16 YCUSTOM_EVNT_TYPE_CONNECT = 2;
-
 // internal context
 
 struct socket_evnt {
     // evnt type for parse
-    __u16 evnt_type;  // 1 - socket_ENTER, 2 - connect_ENTER
     // --------------------------- PUBLIC PART
     __u64 ts_us;
     // 32 bit
@@ -54,7 +50,6 @@ struct socket_evnt {
 struct connect_evnt {
     // --------------------------- PUBLIC PART
     // evnt type for parse
-    __u16 evnt_type;  // 1 - socket, 2 - connect
     __u64 ts_us;
     // 32 bit
     __u32 pid;

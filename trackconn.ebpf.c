@@ -38,7 +38,6 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
 
     // fill connect_evnt , key as pid , put to hashmap
     // parse task_struct and fill the event data
-    valEvnt->evnt_type = YCUSTOM_EVNT_TYPE_CONNECT;
     valEvnt->pid = task->pid;
 
     // safely attempt to get the comm
@@ -54,7 +53,7 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
 
     // get uts_name from nsproxy and uts namespace name
     struct uts_namespace *ns = task->nsproxy->uts_ns;
-    err = bpf_probe_read(&valEvnt->uts_name, sizeof(valEvnt->uts_name), ns->name.nodename);
+    err = bpf_probe_read(&valEvnt->uts_name, sizeof(ns->name.nodename), ns->name.nodename);
     if (err) {
         bpf_printk("read utsname nodename from task struct failed.\n");
         return 0;
@@ -170,8 +169,6 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
         return 0;
     }
 
-    // select task type
-    evnt->evnt_type = YCUSTOM_EVNT_TYPE_SOCKET;
     // get ppid from task struct and store
     evnt->ppid = task->real_parent->pid;
     // get uid from task struct and store
@@ -201,7 +198,7 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
     evnt->type = (u32)type;
     evnt->protocol = (u32)protocol;
 
-    // set ts_us as timestamp
+    // set timestamp
     evnt->ts_us = bpf_ktime_get_ns() / 1000;
 
 
