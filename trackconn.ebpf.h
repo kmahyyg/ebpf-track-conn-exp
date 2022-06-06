@@ -14,60 +14,13 @@
     #include <linux/types.h>
 #endif
 
-#include <bpf/bpf_helpers.h>
 #include <asm/unistd.h>
+#include <bpf/bpf_helpers.h>
 #include <bpf/bpf_endian.h>
 
 #define AF_INET 2
 
-// internal context
-
-struct socket_evnt {
-    // evnt type for parse
-    // --------------------------- PUBLIC PART
-    __u64 ts_us;
-    // 32 bit
-    __u32 pid;
-    __u32 ppid;
-    __u32 uid;
-    // cmdline for process
-    char comm[16];
-    // hostname in uts namespace to distinguish between different containers
-    char uts_name[65];
-    // --------------------------- PRIVATE PART
-    // socket() return socket fd number
-    __s64 retval;
-    // socket info
-    __u16 family;
-    __u32 type;
-    __u32 protocol;
-    // static padding for 64 bit alignment
-
-};
-
-// internal context
-
-struct connect_evnt {
-    // --------------------------- PUBLIC PART
-    // evnt type for parse
-    __u64 ts_us;
-    // 32 bit
-    __u32 pid;
-    __u32 ppid;
-    __u32 uid;
-    // executable name for process
-    char comm[16];
-    // hostname in uts namespace to distinguish between different containers
-    char uts_name[65];
-    // --------------------------- PRIVATE PART
-    __u16 family;
-    __u32 raddr;
-    __u16 rport;
-    // connect with socket call
-    __u32 socketfd;
-    // response info
-    __s64 retval;
-};
+#include "common.h"
 
 // SEC(.maps) is a new mode for struct map definition
 // perf event map in ring buffer, comm with userspace

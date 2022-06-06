@@ -5,15 +5,12 @@
 #ifndef EBPF_SNACK_TRACKDNS_TRACKCONN_H
 #define EBPF_SNACK_TRACKDNS_TRACKCONN_H
 
-
-#include <bpf/libbpf.h>
-#include <bpf/bpf.h>
-
 // use for bump rlimit
 #include <sys/resource.h>
 
 // use for linux types
-#include "trackconn.ebpf.h"
+#include "common.h"
+#include <bpf/bpf_endian.h>
 #include "trackconn.ebpf.skel.h"
 
 
