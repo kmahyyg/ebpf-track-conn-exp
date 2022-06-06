@@ -2,6 +2,7 @@
 // Created by kmahyyg on 5/29/22.
 //
 
+
 #include "trackconn.ebpf.h"
 
 // use libbpf instead of bcc, kernel force you to have license field
@@ -151,7 +152,7 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
     pid_t pid = task->pid;
 
     // new event
-    struct socket_evnt *valEvnt = {0};
+    struct socket_evnt valEvnt = {0};
     struct socket_evnt *evnt;
 
     // create evnt

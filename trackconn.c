@@ -2,9 +2,10 @@
 // Created by user on 5/29/22.
 //
 
-#include "trackconn.h"
+#include "trackconn.ebpf.skel.h"
+#include <sys/resource.h>
 #include <pthread.h>
-
+#include "trackconn.h"
 
 int main(int argc, char **argv) {
     int err = 0;
@@ -123,10 +124,43 @@ void handle_lost_events(void *ctx, int cpu, __u64 lost_cnt) {
 
 void handle_event_c(void *ctx, int cpu, void *data, __u32 data_sz) {
     // https://elixir.bootlin.com/linux/latest/source/tools/bpf/bpftool/map_perf_ring.c#L39
+    struct connect_evnt *e ;
+    time_t ts;
+    struct tm *tm;
+    char ts_str[64];
 
+    e = data;
+    ts = e->ts_us;
+    tm = localtime(&ts);
+    strftime(ts_str, sizeof ts_str, "[%Y-%m-%d %H:%M:%S]", tm);
+
+    // force terminated string
+    e->comm[15] = '\0';
+    e->uts_name[64] = '\0';
+
+
+
+    printf("[SOCK] %s , %d (Parent: %d) %s, %d @ %s, ret: %lld, F:%d , FD:%d, Rem: %u:%d \n", ts_str, e->pid, e->ppid,
+           e->comm, e->uid, e->uts_name, e->retval, e->family, e->socketfd, e->raddr, bpf_ntohs(e->rport));
 
 }
 
 void handle_event_s(void *ctx, int cpu, void *data, __u32 data_sz) {
+    // https://elixir.bootlin.com/linux/latest/source/tools/bpf/bpftool/map_perf_ring.c#L39
+    struct socket_evnt *e ;
+    time_t ts;
+    struct tm *tm;
+    char ts_str[64];
 
+    e = data;
+    ts = e->ts_us;
+    tm = localtime(&ts);
+    strftime(ts_str, sizeof ts_str, "[%Y-%m-%d %H:%M:%S]", tm);
+
+    // force terminated string
+    e->comm[15] = '\0';
+    e->uts_name[64] = '\0';
+
+    printf("[SOCK] %s , %d (Parent: %d) %s, %d @ %s, ret: %lld, F:%d , T:%d, P:%d \n", ts_str, e->pid, e->ppid,
+           e->comm, e->uid, e->uts_name, e->retval, e->family, e->type, e->protocol);
 }
