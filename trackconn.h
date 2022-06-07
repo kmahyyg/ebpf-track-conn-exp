@@ -9,7 +9,7 @@
 #include <sys/resource.h>
 
 // use for linux types
-#include "common.h"
+#include "headers/common.h"
 #include <bpf/bpf_endian.h>
 #include "trackconn.ebpf.skel.h"
 

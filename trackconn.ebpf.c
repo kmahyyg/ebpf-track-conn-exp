@@ -3,7 +3,7 @@
 //
 
 
-#include "trackconn.ebpf.h"
+#include "headers/trackconn.ebpf.h"
 
 // use libbpf instead of bcc, kernel force you to have license field
 char LICENSE[] SEC("license") = "GPL";
@@ -25,13 +25,18 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
 
     // create empty event to map, then lookup
     // it will never be updated by another process since exit trace will be triggered and send out
-    err = bpf_map_update_elem(&connect_maps, &task->pid, &nEvnt, BPF_ANY);
+    //
+
+    pid_t task_pid = task->pid;
+    // BUG HERE: do not directly access to struct scalar, copy it to some where.
+    // https://stackoverflow.com/questions/69413427/bpf-verifier-rejetcs-the-use-of-an-inode-ptr-as-a-key
+    err = bpf_map_update_elem(&connect_maps, &task_pid, &nEvnt, BPF_ANY);
     if (err) {
         return 0;
     }
 
     // get sockaddr
-    valEvnt = bpf_map_lookup_elem(&connect_maps, &task->pid);
+    valEvnt = bpf_map_lookup_elem(&connect_maps, &task_pid);
     if (!valEvnt) {
         // create failed, error
         return 0;
@@ -102,18 +107,17 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
 SEC("tracepoint/syscalls/sys_exit_connect")
 int tracepoint__syscalls__sys_exit_connect(struct trace_event_raw_sys_exit *ctx) {
     if (ctx->id != __NR_connect) return 0;
-    pid_t pid;
 
     int err = 0;
     struct connect_evnt *evnt;
 
     // get pid
-    pid = (pid_t) bpf_get_current_pid_tgid();
+    pid_t task_pid = (pid_t) bpf_get_current_pid_tgid();
 
     // check if enter event has been recorded
-    evnt = bpf_map_lookup_elem(&connect_maps, &pid);
+    evnt = bpf_map_lookup_elem(&connect_maps, &task_pid);
     if (!evnt) {
-        bpf_printk("no conn-event found for pid %d\n", pid);
+        bpf_printk("no conn-event found for pid %d\n", task_pid);
         return 0;
     }
 
@@ -128,7 +132,7 @@ int tracepoint__syscalls__sys_exit_connect(struct trace_event_raw_sys_exit *ctx)
     }
 
     // cleanup, delete event
-    err = bpf_map_delete_elem(&connect_maps, &pid);
+    err = bpf_map_delete_elem(&connect_maps, &task_pid);
     if (err) {
         // check /sys/kernel/debug/tracing/trace_pipe
         bpf_printk("delete connect_evnt failed: %d\n", err);
@@ -149,7 +153,7 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
     struct task_struct *task = (struct task_struct *)bpf_get_current_task();
 
     // pid check
-    pid_t pid = task->pid;
+    pid_t task_pid = task->pid;
 
     // new event
     struct socket_evnt valEvnt = {0};
@@ -157,16 +161,16 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
 
     // create evnt
     int err = 0 ;
-    err = bpf_map_update_elem(&socket_maps, &pid, &valEvnt, BPF_ANY);
+    err = bpf_map_update_elem(&socket_maps, &task_pid, &valEvnt, BPF_ANY);
     if (err) {
         bpf_printk("create socket_evnt failed: %d\n", err);
         return 0;
     }
 
     // check existing evnt
-    evnt = bpf_map_lookup_elem(&socket_maps, &pid);
+    evnt = bpf_map_lookup_elem(&socket_maps, &task_pid);
     if (!evnt) {
-        bpf_printk("no socket_evnt found for pid %d\n", pid);
+        bpf_printk("no socket_evnt found for pid %d\n", task_pid);
         return 0;
     }
 
@@ -222,14 +226,14 @@ int tracepoint__syscalls_sys_exit_socket(struct trace_event_raw_sys_exit *ctx) {
 
     // get pid
     u64 id = bpf_get_current_pid_tgid();
-    pid_t pid = (pid_t)id;
+    pid_t task_pid = (pid_t)id;
 
 
     // lookup evnt from socket_maps
     int err = 0;
-    evnt = bpf_map_lookup_elem(&socket_maps, &pid);
+    evnt = bpf_map_lookup_elem(&socket_maps, &task_pid);
     if (!evnt) {
-        bpf_printk("no socket_evnt found for pid %d\n", pid);
+        bpf_printk("no socket_evnt found for pid %d\n", task_pid);
         return 0;
     }
 
@@ -243,7 +247,7 @@ int tracepoint__syscalls_sys_exit_socket(struct trace_event_raw_sys_exit *ctx) {
     }
 
     // cleanup, delete event
-    err = bpf_map_delete_elem(&socket_maps, &pid);
+    err = bpf_map_delete_elem(&socket_maps, &task_pid);
     if (err) {
         // check /sys/kernel/debug/tracing/trace_pipe
         bpf_printk("delete socket_evnt failed: %d\n", err);
