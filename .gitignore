@@ -6,5 +6,5 @@ cmake-*/
 *.elf
 *.a
 
-vmlinux.h
+headers/vmlinux.h
 *.ebpf.skel.h
