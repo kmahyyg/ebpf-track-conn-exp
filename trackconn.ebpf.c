@@ -5,6 +5,7 @@
 
 #include "headers/trackconn.ebpf.h"
 
+
 // use libbpf instead of bcc, kernel force you to have license field
 char LICENSE[] SEC("license") = "GPL";
 
@@ -53,30 +54,21 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
     valEvnt->pid = task_pid;
 
     // safely attempt to get the comm
-    err = bpf_get_current_comm(&valEvnt->comm, sizeof(valEvnt->comm));   // in task struct, always 16
+    err = bpf_get_current_comm(valEvnt->comm, sizeof(valEvnt->comm));   // in task struct, always 16
     if (err) {
         bpf_printk("read executable name from task struct comm field failed\n");
         return 0; // always return 0 to prevent from hanging around.
     }
 
-    // get ppid and uid
+    // get ppid and uid and uts namespace nodename
 
-    err = bpf_probe_read(&valEvnt->ppid, sizeof(task->real_parent->pid), &task->real_parent->pid);
-    if (err) {
-        return 0;
-    }
+    // https://nakryiko.com/posts/bpf-core-reference-guide/#bpf-core-read-str
+    valEvnt->ppid = BPF_CORE_READ(task, real_parent, pid);
 
-    err = bpf_probe_read(&valEvnt->uid, sizeof(task->real_cred->uid.val), &task->real_cred->uid.val);
-    if (err) {return 0;}
-
+    valEvnt->uid = BPF_CORE_READ(task, real_cred, uid.val);
 
     // get uts_name from nsproxy and uts namespace name
-    struct uts_namespace *ns = task->nsproxy->uts_ns;
-    err = bpf_probe_read(&valEvnt->uts_name, sizeof(ns->name.nodename), ns->name.nodename);
-    if (err) {
-        bpf_printk("read utsname nodename from task struct failed.\n");
-        return 0;
-    }
+    BPF_CORE_READ_STR_INTO(valEvnt->uts_name, task, nsproxy, uts_ns, name.nodename);
 
     // sockaddr
     struct sockaddr *sockparm = (struct sockaddr *) (ctx->args[1]);
@@ -192,26 +184,20 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
         return 0;
     }
 
-    // get ppid from task struct and store
-    err = bpf_probe_read(&evnt->ppid, sizeof(task->real_parent->pid), &task->real_parent->pid);
-    if (err) {return 0;}
+    // get ppid and uid and uts namespace nodename
 
-    // get uid from task struct and store
-    err = bpf_probe_read(&evnt->uid, sizeof(task->real_cred->uid.val), &task->real_cred->uid.val);
-    if (err) {return 0;}
+    // https://nakryiko.com/posts/bpf-core-reference-guide/#bpf-core-read-str
+    evnt->ppid = BPF_CORE_READ(task, real_parent, pid);
+
+    evnt->uid = BPF_CORE_READ(task, real_cred, uid.val);
+
+    // get uts_name from nsproxy and uts namespace name
+    BPF_CORE_READ_STR_INTO(evnt->uts_name, task, nsproxy, uts_ns, name.nodename);
 
     // get comm
     err = bpf_probe_read(&evnt->comm, sizeof(task->comm), task->comm);
     if (err) {
         bpf_printk("read task comm failed.\n");
-        return 0;
-    }
-
-    // get uts hostname from nsproxy
-    struct uts_namespace *ns = task->nsproxy->uts_ns;
-    err = bpf_probe_read(&evnt->uts_name, sizeof(ns->name.nodename), ns->name.nodename);
-    if (err) {
-        bpf_printk("read utsname failed.\n");
         return 0;
     }
 
