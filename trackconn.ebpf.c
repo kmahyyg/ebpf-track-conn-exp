@@ -20,14 +20,19 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
     struct connect_evnt nEvnt = { 0 };
     struct connect_evnt *valEvnt = { 0 };
 
-    // get task struct
-    struct task_struct *task = (struct task_struct *) bpf_get_current_task();
-
     // create empty event to map, then lookup
     // it will never be updated by another process since exit trace will be triggered and send out
     //
+    // get task struct
+    struct task_struct *task = (struct task_struct *) bpf_get_current_task();
 
-    pid_t task_pid = task->pid;
+    pid_t task_pid;
+
+    err = bpf_probe_read(&task_pid, sizeof(task->pid), &task->pid);
+    if (err) {
+        return 0;
+    }
+
     // BUG HERE: do not directly access to struct scalar, copy it to some where.
     // https://stackoverflow.com/questions/69413427/bpf-verifier-rejetcs-the-use-of-an-inode-ptr-as-a-key
     err = bpf_map_update_elem(&connect_maps, &task_pid, &nEvnt, BPF_ANY);
@@ -36,6 +41,7 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
     }
 
     // get sockaddr
+
     valEvnt = bpf_map_lookup_elem(&connect_maps, &task_pid);
     if (!valEvnt) {
         // create failed, error
@@ -44,7 +50,7 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
 
     // fill connect_evnt , key as pid , put to hashmap
     // parse task_struct and fill the event data
-    valEvnt->pid = task->pid;
+    valEvnt->pid = task_pid;
 
     // safely attempt to get the comm
     err = bpf_get_current_comm(&valEvnt->comm, sizeof(valEvnt->comm));   // in task struct, always 16
@@ -54,8 +60,15 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
     }
 
     // get ppid and uid
-    valEvnt->ppid = task->real_parent->pid;
-    valEvnt->uid = task->real_cred->uid.val;
+
+    err = bpf_probe_read(&valEvnt->ppid, sizeof(task->real_parent->pid), &task->real_parent->pid);
+    if (err) {
+        return 0;
+    }
+
+    err = bpf_probe_read(&valEvnt->uid, sizeof(task->real_cred->uid.val), &task->real_cred->uid.val);
+    if (err) {return 0;}
+
 
     // get uts_name from nsproxy and uts namespace name
     struct uts_namespace *ns = task->nsproxy->uts_ns;
@@ -71,7 +84,7 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
 
     // chekc ipv4
     sa_family_t fam;
-    err = bpf_probe_read(&fam, sizeof(fam), &sockparm->sa_family);
+    err = bpf_probe_read(&fam, sizeof(sockparm->sa_family), &sockparm->sa_family);
     if (err) {
         bpf_printk("read sockaddr family failed.\n");
         return 0;
@@ -83,7 +96,7 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
 
     // record raddr
     struct sockaddr_in *sin = (struct sockaddr_in *) (sockparm);
-    err = bpf_probe_read(&valEvnt->raddr, sizeof(valEvnt->raddr), &sin->sin_addr.s_addr);
+    err = bpf_probe_read(&valEvnt->raddr, sizeof(sin->sin_addr.s_addr), &sin->sin_addr.s_addr);
     if (err) {
         bpf_printk("read sockaddr_in failed.\n");
         return 0;
@@ -91,7 +104,7 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
 
     // record rport
     u32 rport  = 0;
-    err = bpf_probe_read(&rport, sizeof(sin->sin_port),&sin->sin_port);
+    err = bpf_probe_read(&rport, sizeof(sin->sin_port), &sin->sin_port);
     if (err) {
         bpf_printk("read sockaddr_in port failed.\n");
         return 0;
@@ -145,6 +158,7 @@ int tracepoint__syscalls__sys_exit_connect(struct trace_event_raw_sys_exit *ctx)
 // trace socket() enter
 SEC("tracepoint/syscalls/sys_enter_socket")
 int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx) {
+    int err = 0 ;
     // tracepoint by bpftrace
     // bpftrace -lv tracepoint:syscalls:sys_enter_socket
     if (ctx->id != __NR_socket) return 0;
@@ -153,14 +167,18 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
     struct task_struct *task = (struct task_struct *)bpf_get_current_task();
 
     // pid check
-    pid_t task_pid = task->pid;
+    pid_t task_pid;
+
+    err = bpf_probe_read(&task_pid, sizeof(task->pid), &task->pid);
+    if (err) {
+        return 0;
+    }
 
     // new event
     struct socket_evnt valEvnt = {0};
     struct socket_evnt *evnt;
 
     // create evnt
-    int err = 0 ;
     err = bpf_map_update_elem(&socket_maps, &task_pid, &valEvnt, BPF_ANY);
     if (err) {
         bpf_printk("create socket_evnt failed: %d\n", err);
@@ -175,12 +193,15 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
     }
 
     // get ppid from task struct and store
-    evnt->ppid = task->real_parent->pid;
+    err = bpf_probe_read(&evnt->ppid, sizeof(task->real_parent->pid), &task->real_parent->pid);
+    if (err) {return 0;}
+
     // get uid from task struct and store
-    evnt->uid = task->real_cred->uid.val;
+    err = bpf_probe_read(&evnt->uid, sizeof(task->real_cred->uid.val), &task->real_cred->uid.val);
+    if (err) {return 0;}
 
     // get comm
-    err = bpf_probe_read(&evnt->comm, sizeof(evnt->comm), task->comm);
+    err = bpf_probe_read(&evnt->comm, sizeof(task->comm), task->comm);
     if (err) {
         bpf_printk("read task comm failed.\n");
         return 0;
@@ -188,7 +209,7 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
 
     // get uts hostname from nsproxy
     struct uts_namespace *ns = task->nsproxy->uts_ns;
-    err = bpf_probe_read(&evnt->uts_name, sizeof(evnt->uts_name), ns->name.nodename);
+    err = bpf_probe_read(&evnt->uts_name, sizeof(ns->name.nodename), ns->name.nodename);
     if (err) {
         bpf_printk("read utsname failed.\n");
         return 0;
