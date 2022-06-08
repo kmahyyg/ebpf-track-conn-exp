@@ -10,7 +10,7 @@ clean:
 	rm -rf ./src-go/cmd/bpf_bpf*.o
 
 kernonly:
-	./compile-kern.sh
+	bash ./compile-kern.sh
 
 useronly:
-	
+	bash ./compile-user.sh
