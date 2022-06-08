@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 // environment variables is set by scripts/build.sh
@@ -148,9 +149,8 @@ func parseConnectEvent(e *bpfConnectEvnt) {
 
 // internal parse
 type EventCommon struct {
-	TsUs    uint64
-	Pid     uint32
-	Ppid    uint32
+	Pid     uint64
+	Ppid    uint64
 	Uid     uint32
 	Comm    [16]int8
 	UtsName [65]int8
@@ -160,14 +160,13 @@ type EventCommon struct {
 func (e *EventCommon) ToString(prefix string) string {
 	exeName := utils.I8ToStr(e.Comm[:])
 	utsName := utils.I8ToStr(e.UtsName[:])
-	execTime := utils.TimestampAsStr(e.TsUs)
+	execTime := time.Now().UTC().Format(time.RFC3339)
 	return fmt.Sprintf("[%s] [%s] [%d (Parent: %d) %s] [%d @ %s] [Ret: %d]",
 		prefix, execTime, e.Pid, e.Ppid, exeName, e.Uid, utsName, e.Retval)
 }
 
 func parseCommon_socket(e *bpfSocketEvnt) {
 	ec := &EventCommon{}
-	ec.TsUs = e.TsUs
 	ec.Pid = e.Pid
 	ec.Ppid = e.Ppid
 	ec.Uid = e.Uid
@@ -180,7 +179,6 @@ func parseCommon_socket(e *bpfSocketEvnt) {
 
 func parseCommon_connect(e *bpfConnectEvnt) {
 	ec := &EventCommon{}
-	ec.TsUs = e.TsUs
 	ec.Pid = e.Pid
 	ec.Ppid = e.Ppid
 	ec.Uid = e.Uid
