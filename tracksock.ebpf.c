@@ -1,13 +1,11 @@
 //
 // Created by kmahyyg on 5/29/22.
-//
-
+// Filename: tracksock.ebpf.c
 
 #include "headers/trackconn.ebpf.h"
 
 // use libbpf instead of bcc, kernel force you to have license field
 char LICENSE[] SEC("license") = "GPL";
-
 
 // trace socket() enter
 SEC("tracepoint/syscalls/sys_enter_socket")

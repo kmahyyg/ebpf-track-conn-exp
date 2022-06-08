@@ -5,7 +5,7 @@ cmake-*/
 *.bin
 *.elf
 *.a
-
+*.gen.c
 headers/vmlinux.h
 *.ebpf.skel.h
 ebpf_trackconn

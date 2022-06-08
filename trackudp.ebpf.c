@@ -1,6 +1,6 @@
 //
 // Created by user on 6/8/22.
-//
+// Filename: trackudp.ebpf.c
 
 #include "headers/trackconn.ebpf.h"
 
@@ -47,7 +47,7 @@ int tracepoint__syscalls__sys_enter_sendto(struct trace_event_raw_sys_enter *ctx
         bpf_probe_read(&valEvnt->uts_name, sizeof(valEvnt->uts_name), uts_name);
     }
 
-    struct sockaddr *dest_addr = (struct sockaddr_in *) ctx->args[4];
+    struct sockaddr *dest_addr = (struct sockaddr *) ctx->args[4];
     // check if ipv4
     sa_family_t fam;
     err = bpf_probe_read(&fam, sizeof(dest_addr->sa_family), &dest_addr->sa_family);

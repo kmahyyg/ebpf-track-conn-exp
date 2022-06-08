@@ -1,2 +1,2 @@
 #!/bin/bash
-bpftool gen skeleton trackconn.ebpf.o > trackconn.ebpf.skel.h
+bpftool gen skeleton trackall.conn.ebpf.gen.o > trackall.conn.ebpf.gen.skel.h
