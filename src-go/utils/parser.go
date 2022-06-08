@@ -16,7 +16,7 @@ var sockDataList = map[uint32]string{
 
 var familyDataList = map[uint16]string{
 	uint16(0):  "AF_UNSPEC",
-	uint16(1):  "AF_UNIX",
+	uint16(1):  "AF_UNIX|AF_LOCAL",
 	uint16(2):  "AF_INET",
 	uint16(3):  "AF_AX25",
 	uint16(4):  "AF_IPX",
@@ -59,7 +59,9 @@ var familyDataList = map[uint16]string{
 	uint16(41): "AF_KCM",
 	uint16(42): "AF_QIPCRTR",
 	uint16(43): "AF_SMC",
-	uint16(44): "AF_MAX",
+	uint16(44): "AF_XDP",
+	uint16(45): "AF_MCTP",
+	uint16(46): "AF_MAX",
 }
 
 var protocolDataList = map[uint32]string{
