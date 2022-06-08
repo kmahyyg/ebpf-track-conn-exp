@@ -10,10 +10,9 @@
 struct socket_evnt {
     // evnt type for parse
     // --------------------------- PUBLIC PART
-    __u64 ts_us;
     // 32 bit
-    __u32 pid;
-    __u32 ppid;
+    __u64 pid;
+    __u64 ppid;
     __u32 uid;
     // cmdline for process
     char comm[16];
@@ -35,10 +34,9 @@ struct socket_evnt {
 struct connect_evnt {
     // --------------------------- PUBLIC PART
     // evnt type for parse
-    __u64 ts_us;
     // 32 bit
-    __u32 pid;
-    __u32 ppid;
+    __u64 pid;
+    __u64 ppid;
     __u32 uid;
     // executable name for process
     char comm[16];
