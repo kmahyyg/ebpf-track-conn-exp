@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # increase memlock limit
-sudo ulimit -l unlimited
+sudo bash -c -- ulimit -l unlimited
 
 # increase max file descriptors if possible
-sudo ulimit -n unlimited
+sudo bash -c -- ulimit -n unlimited
 
 # mount debugfs to /sys/kernel/debug
 sudo mount -t debugfs debugfs /sys/kernel/debug
@@ -21,6 +21,7 @@ if [ -f /sys/kernel/btf/vmlinux ]; then
   echo "BTF is supported"
 else
   echo "BTF is not supported"
+  exit 1
 fi
 
 # check BTF and BPF related information in /proc/config.gz or /proc/config

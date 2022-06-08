@@ -8,3 +8,5 @@ cmake-*/
 
 headers/vmlinux.h
 *.ebpf.skel.h
+ebpf_trackconn
+.vscode/
