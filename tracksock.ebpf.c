@@ -104,7 +104,7 @@ int tracepoint__syscalls_sys_exit_socket(struct trace_event_raw_sys_exit *ctx) {
     evnt->retval = ctx->ret;
 
     // submit to perf event
-    err = bpf_perf_event_output(ctx, &s_p_events, BPF_F_CURRENT_CPU, evnt, sizeof(*evnt));
+    err = bpf_perf_event_output(ctx, &s_s_events, BPF_F_CURRENT_CPU, evnt, sizeof(*evnt));
     if (err) {
         bpf_printk("perf_event_output failed: %d\n", err);
         return 0;
