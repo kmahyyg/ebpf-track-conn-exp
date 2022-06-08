@@ -59,6 +59,8 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
     // get ppid and uid and uts namespace nodename
 
     // https://nakryiko.com/posts/bpf-core-reference-guide/#bpf-core-read-str
+    // https://blog.aquasec.com/ebf-portable-code
+    // https://stackoverflow.com/questions/60383861/failure-to-compare-strings-with-ebpf
     valEvnt->ppid = BPF_CORE_READ(task, real_parent, pid);
 
     valEvnt->uid = BPF_CORE_READ(task, real_cred, uid.val);
@@ -158,13 +160,8 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
     struct task_struct *task = (struct task_struct *)bpf_get_current_task();
 
     // pid check
-    __u64 task_pid;
+    pid_t task_pid;
     task_pid = bpf_get_current_pid_tgid();
-
-    err = bpf_probe_read(&task_pid, sizeof(task->pid), &task->pid);
-    if (err) {
-        return 0;
-    }
 
     // new event
     struct socket_evnt valEvnt = {0};
@@ -187,16 +184,19 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
     // get ppid and uid and uts namespace nodename
 
     // https://nakryiko.com/posts/bpf-core-reference-guide/#bpf-core-read-str
+    evnt->pid = task_pid;
     evnt->ppid = BPF_CORE_READ(task, real_parent, pid);
-
     evnt->uid = BPF_CORE_READ(task, real_cred, uid.val);
 
     // get uts_name from nsproxy and uts namespace name
-
+    char *uts_name = BPF_CORE_READ(task, nsproxy, uts_ns, name.nodename);
+    if (uts_name) {
+        bpf_probe_read_str(evnt->uts_name, sizeof(evnt->uts_name), uts_name);
+    }
 
 
     // get comm
-    err = bpf_probe_read(&evnt->comm, sizeof(task->comm), task->comm);
+    err = bpf_get_current_comm(evnt->comm, sizeof(evnt->comm));
     if (err) {
         bpf_printk("read task comm failed.\n");
         return 0;

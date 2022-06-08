@@ -106,6 +106,9 @@ func ParseSocketFamily(fam uint16) string {
 }
 
 func ParseSocketType(typ uint32) string {
+	if typ > 10 || typ < 0 {
+		return "--"
+	}
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println("ParseSocketType error: undefined socket type")
