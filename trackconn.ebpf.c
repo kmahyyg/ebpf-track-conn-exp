@@ -5,7 +5,6 @@
 
 #include "headers/trackconn.ebpf.h"
 
-
 // use libbpf instead of bcc, kernel force you to have license field
 char LICENSE[] SEC("license") = "GPL";
 
@@ -29,10 +28,7 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
 
     pid_t task_pid;
 
-    err = bpf_probe_read(&task_pid, sizeof(task->pid), &task->pid);
-    if (err) {
-        return 0;
-    }
+    task_pid = bpf_get_current_pid_tgid();
 
     // BUG HERE: do not directly access to struct scalar, copy it to some where.
     // https://stackoverflow.com/questions/69413427/bpf-verifier-rejetcs-the-use-of-an-inode-ptr-as-a-key
@@ -68,7 +64,10 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
     valEvnt->uid = BPF_CORE_READ(task, real_cred, uid.val);
 
     // get uts_name from nsproxy and uts namespace name
-    BPF_CORE_READ_STR_INTO(valEvnt->uts_name, task, nsproxy, uts_ns, name.nodename);
+    char *uts_name = BPF_CORE_READ(task, nsproxy, uts_ns, name.nodename);
+    if (uts_name) {
+        bpf_probe_read_str(valEvnt->uts_name, sizeof(valEvnt->uts_name), uts_name);
+    }
 
     // sockaddr
     struct sockaddr *sockparm = (struct sockaddr *) (ctx->args[1]);
@@ -103,8 +102,8 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
     }
     valEvnt->rport = bpf_ntohs(rport);
 
-    // set timestamp
-    valEvnt->ts_us = bpf_ktime_get_ns() / 1000;
+    // deprecate timestamp
+
     return 0;
 }
 
@@ -159,7 +158,8 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
     struct task_struct *task = (struct task_struct *)bpf_get_current_task();
 
     // pid check
-    pid_t task_pid;
+    __u64 task_pid;
+    task_pid = bpf_get_current_pid_tgid();
 
     err = bpf_probe_read(&task_pid, sizeof(task->pid), &task->pid);
     if (err) {
@@ -192,7 +192,8 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
     evnt->uid = BPF_CORE_READ(task, real_cred, uid.val);
 
     // get uts_name from nsproxy and uts namespace name
-    BPF_CORE_READ_STR_INTO(evnt->uts_name, task, nsproxy, uts_ns, name.nodename);
+
+
 
     // get comm
     err = bpf_probe_read(&evnt->comm, sizeof(task->comm), task->comm);
@@ -210,8 +211,7 @@ int tracepoint__syscalls__sys_enter_socket(struct trace_event_raw_sys_enter *ctx
     evnt->type = (u32)type;
     evnt->protocol = (u32)protocol;
 
-    // set timestamp
-    evnt->ts_us = bpf_ktime_get_ns() / 1000;
+    // deprecate timestamp due to ktime
 
 
     return 0;
