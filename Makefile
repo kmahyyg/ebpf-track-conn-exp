@@ -8,6 +8,7 @@ clean:
 	rm -rf ./headers/vmlinux.h
 	rm -rf ./src-go/cmd/bpf_bpf*.go
 	rm -rf ./src-go/cmd/bpf_bpf*.o
+	rm -rf ebpf_trackconn
 
 kernonly:
 	bash ./compile-kern.sh

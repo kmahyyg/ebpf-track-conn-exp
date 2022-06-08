@@ -9,9 +9,9 @@
 #include <sys/resource.h>
 
 // use for linux types
-#include "headers/common.h"
+#include "../headers/common.h"
 #include <bpf/bpf_endian.h>
-#include "trackconn.ebpf.skel.h"
+#include "../tracksock.ebpf.skel.h"
 
 
 struct poll_pbuf_event_data {

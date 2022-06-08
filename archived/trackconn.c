@@ -2,7 +2,7 @@
 // Created by user on 5/29/22.
 //
 
-#include "trackconn.ebpf.skel.h"
+#include "../trackconn.ebpf.skel.h"
 #include <sys/resource.h>
 #include <pthread.h>
 #include "trackconn.h"

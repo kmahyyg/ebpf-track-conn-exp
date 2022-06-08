@@ -53,4 +53,42 @@ struct connect_evnt {
 };
 
 
+struct sendto_evnt {
+    // evnt type for parse
+    // --------------------------- PUBLIC PART
+    // 32 bit
+    __u64 pid;
+    __u64 ppid;
+    __u32 uid;
+    // cmdline for process
+    char comm[16];
+    // hostname in uts namespace to distinguish between different containers
+    char uts_name[65];
+    // return value
+    __s64 retval;
+    // --------------------------- PRIVATE PART
+    __u16 family;
+    __u32 raddr;
+    __u16 rport;
+};
+
+struct recvfrom_evnt {
+    // evnt type for parse
+    // --------------------------- PUBLIC PART
+    // 32 bit
+    __u64 pid;
+    __u64 ppid;
+    __u32 uid;
+    // cmdline for process
+    char comm[16];
+    // hostname in uts namespace to distinguish between different containers
+    char uts_name[65];
+    // return value
+    __s64 retval;
+    // --------------------------- PRIVATE PART
+    __u16 family;
+    __u32 saddr;
+    __u16 sport;
+};
+
 #endif //EBPF_SNACK_TRACKDNS_COMMON_H
