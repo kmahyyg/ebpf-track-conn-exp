@@ -1,6 +1,6 @@
-all = .PHONY
-
 .PHONY: clean kernonly useronly
+
+all: clean kernonly useronly
 
 clean:
 	rm -rf *.o
@@ -14,3 +14,4 @@ kernonly:
 
 useronly:
 	bash ./compile-user.sh
+
