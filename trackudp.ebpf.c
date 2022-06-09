@@ -59,6 +59,7 @@ int tracepoint__syscalls__sys_enter_sendto(struct trace_event_raw_sys_enter *ctx
         // only support IPv4 currently
         return 0;
     }
+    valEvnt->family=fam;
 
     // sin
     struct sockaddr_in *sin = (struct sockaddr_in *) (dest_addr);
@@ -165,6 +166,7 @@ int tracepoint__syscalls__sys_enter_recvfrom(struct trace_event_raw_sys_enter *c
         // only support IPv4 currently
         return 0;
     }
+    valEvnt->family = fam;
     // record saddr
     // directly cast, check below link for details
     // https://stackoverflow.com/questions/1276294/getting-ipv4-address-from-a-sockaddr-structure/1276307

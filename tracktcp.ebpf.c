@@ -84,6 +84,7 @@ int tracepoint__syscalls__sys_enter_connect(struct trace_event_raw_sys_enter *ct
         // only support IPv4 currently
         return 0;
     }
+    valEvnt->family = fam;
 
     // record raddr
     struct sockaddr_in *sin = (struct sockaddr_in *) (sockparm);
