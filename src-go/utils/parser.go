@@ -128,5 +128,5 @@ func ParseSocketProtocol(prot uint32) string {
 
 func ParseConnectIPAddr(addr uint32) string {
 	// from sin.in_addr as uint32 to decimal IPv4 addr
-	return fmt.Sprintf("%d.%d.%d.%d", byte(addr>>24), byte(addr>>16), byte(addr>>8), byte(addr))
+	return fmt.Sprintf("%d.%d.%d.%d", byte(addr), byte(addr>>8), byte(addr>>16), byte(addr>>24))
 }
