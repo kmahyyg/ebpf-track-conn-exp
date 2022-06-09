@@ -1,7 +1,11 @@
 #!/bin/bash
 
 ./mod-environment.sh
+
+set -e
+
 ./genvmlinux-kern.sh
+
 
 echo '// DO NOT MODIFY -- AUTO GENERATED FILE' > trackall.conn.ebpf.gen.c
 echo '#include "headers/trackconn.ebpf.h"' >> trackall.conn.ebpf.gen.c

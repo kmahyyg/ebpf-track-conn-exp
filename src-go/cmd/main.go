@@ -20,7 +20,7 @@ import (
 )
 
 // environment variables is set by scripts/build.sh
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc $BPF_CLANG -cflags $BPF_CLAGS bpf ../trackall.conn.ebpf.gen.c -- -I../../headers
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc $BPF_CLANG -cflags $BPF_CLAGS bpf ../../trackall.conn.ebpf.gen.c -- -I../../headers
 func main() {
 	stopper := make(chan os.Signal, 1)
 	signal.Notify(stopper, os.Interrupt, syscall.SIGTERM, syscall.SIGKILL)
