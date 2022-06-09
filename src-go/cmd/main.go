@@ -249,7 +249,7 @@ func parseCommon_socket(e *bpfSocketEvnt) {
 		Retval:  e.Retval,
 	}
 
-	fmt.Printf("%s [F:%s] [T:%s] [P:%s] \n", ec.ToString("SOCKET"), utils.ParseSocketFamily(e.Family),
+	fmt.Printf("%s [F: %s] [T: %s] [P: %s] \n", ec.ToString("SOCKET"), utils.ParseSocketFamily(e.Family),
 		utils.ParseSocketType(e.Type), utils.ParseSocketProtocol(e.Protocol))
 	return
 }
@@ -268,7 +268,7 @@ func parseCommon_connect(e *bpfConnectEvnt) {
 		UtsName: e.UtsName,
 		Retval:  e.Retval,
 	}
-	fmt.Printf("%s [F:%s] [FD: %d] [R: %s:%d] \n", ec.ToString("CONNECT"), utils.ParseSocketFamily(e.Family),
+	fmt.Printf("%s [F: %s] [FD: %d] [R: %s:%d] \n", ec.ToString("CONNECT"), utils.ParseSocketFamily(e.Family),
 		e.Socketfd, utils.ParseConnectIPAddr(e.Raddr), e.Rport)
 	return
 }
@@ -287,7 +287,7 @@ func parseCommon_sendto(e *bpfSendtoEvnt) {
 		UtsName: e.UtsName,
 		Retval:  e.Retval,
 	}
-	fmt.Printf("%s [F:%s] [R: %s:%d] \n", ec.ToString("SENDTO"), utils.ParseSocketFamily(e.Family),
+	fmt.Printf("%s [F: %s] [R: %s:%d] \n", ec.ToString("SENDTO"), utils.ParseSocketFamily(e.Family),
 		utils.ParseConnectIPAddr(e.Raddr), e.Rport)
 	return
 }
@@ -306,7 +306,7 @@ func parseCommon_recvfrom(e *bpfRecvfromEvnt) {
 		UtsName: e.UtsName,
 		Retval:  e.Retval,
 	}
-	fmt.Printf("%s [F:%s] [S: %s:%d] \n", ec.ToString("RECVFROM"), utils.ParseSocketFamily(e.Family),
+	fmt.Printf("%s [F: %s] [S: %s:%d] \n", ec.ToString("RECVFROM"), utils.ParseSocketFamily(e.Family),
 		utils.ParseConnectIPAddr(e.Saddr), e.Sport)
 	return
 }
