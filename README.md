@@ -1,3 +1,3 @@
 # Note
 
-Run `compile.sh` under repo root.
+Run `make all` under repo root.
