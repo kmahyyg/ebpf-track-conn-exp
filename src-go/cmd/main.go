@@ -54,6 +54,20 @@ func main() {
 	}
 	defer connectEvntReader.Close()
 
+	// third: sendto event
+	sendToEvntReader, err := perf.NewReader(cBpfObjs.StoU_events, os.Getpagesize())
+	if err != nil {
+		log.Fatalf("create sendto evnt reader failed: %s \n", err.Error())
+	}
+	defer sendToEvntReader.Close()
+
+	// fourth: recvfrom event
+	recvFromEvntReader, err := perf.NewReader(cBpfObjs.RfromU_events, os.Getpagesize())
+	if err != nil {
+		log.Fatalf("create recvfrom evnt reader failed: %s \n", err.Error())
+	}
+	defer recvFromEvntReader.Close()
+
 	// link corresponding program to function call
 	tp_enter_socket, err := link.Tracepoint("syscalls", "sys_enter_socket",
 		cBpfObjs.TracepointSyscallsSysEnterSocket, nil)
@@ -83,6 +97,34 @@ func main() {
 	}
 	defer tp_exit_connect.Close()
 
+	tp_enter_sendto, err := link.Tracepoint("syscalls", "sys_enter_sendto",
+		cBpfObjs.TracepointSyscallsSysEnterSendto, nil)
+	if err != nil {
+		log.Fatalf("link enter_sendto syscall failed: %s \n", err.Error())
+	}
+	defer tp_enter_sendto.Close()
+
+	tp_exit_sendto, err := link.Tracepoint("syscalls", "sys_exit_sendto",
+		cBpfObjs.TracepointSyscallsSysExitSendto, nil)
+	if err != nil {
+		log.Fatalf("link exit_sendto syscall failed: %s \n", err.Error())
+	}
+	defer tp_exit_sendto.Close()
+
+	tp_enter_recvfrom, err := link.Tracepoint("syscalls", "sys_enter_recvfrom",
+		cBpfObjs.TracepointSyscallsSysEnterRecvfrom, nil)
+	if err != nil {
+		log.Fatalf("link enter_recvfrom syscall failed: %s \n", err.Error())
+	}
+	defer tp_enter_recvfrom.Close()
+
+	tp_exit_recvfrom, err := link.Tracepoint("syscalls", "sys_exit_recvfrom",
+		cBpfObjs.TracepointSyscallsSysExitRecvfrom, nil)
+	if err != nil {
+		log.Fatalf("link exit_recvfrom syscall failed: %s \n", err.Error())
+	}
+	defer tp_exit_recvfrom.Close()
+
 	// logger start
 	log.Println("Waiting for events...")
 
@@ -105,6 +147,7 @@ func main() {
 			sEvnt := bpfSocketEvnt{}
 			if err := binary.Read(bytes.NewBuffer(recSocket.RawSample), binary.LittleEndian, &sEvnt); err != nil {
 				log.Printf("ERROR: read socket event failed: %s \n", err.Error())
+				continue
 			}
 			// parsing and show socket event
 			parseSocketEvent(&sEvnt)
@@ -129,11 +172,61 @@ func main() {
 			cEvnt := bpfConnectEvnt{}
 			if err := binary.Read(bytes.NewBuffer(recConnect.RawSample), binary.LittleEndian, &cEvnt); err != nil {
 				log.Printf("ERROR: read socket event failed: %s \n", err.Error())
+				continue
 			}
 			// parsing and show socket event
 			parseConnectEvent(&cEvnt)
 		}
+	}()
 
+	// read from sendto event reader
+	go func() {
+		for {
+			recSendTo, err := sendToEvntReader.Read()
+			if err != nil {
+				if errors.Is(err, perf.ErrClosed) {
+					return
+				}
+				log.Printf("ERROR: sendto event reader failed: %s \n", err.Error())
+				continue
+			}
+			if recSendTo.LostSamples != 0 {
+				log.Printf("WARN: dropped %d samples due to ring-buffer full \n", recSendTo.LostSamples)
+				continue
+			}
+			sEvnt := bpfSendtoEvnt{}
+			if err := binary.Read(bytes.NewBuffer(recSendTo.RawSample), binary.LittleEndian, &sEvnt); err != nil {
+				log.Printf("ERROR: read sendto event failed: %s \n", err.Error())
+				continue
+			}
+			// parsing and show sendto event
+			parseSendtoEvent(&sEvnt)
+		}
+	}()
+
+	// read from recvfrom event reader
+	go func() {
+		for {
+			recRecvFrom, err := recvFromEvntReader.Read()
+			if err != nil {
+				if errors.Is(err, perf.ErrClosed) {
+					return
+				}
+				log.Printf("ERROR: recvfrom event reader failed: %s \n", err.Error())
+				continue
+			}
+			if recRecvFrom.LostSamples != 0 {
+				log.Printf("WARN: dropped %d samples due to ring-buffer full \n", recRecvFrom.LostSamples)
+				continue
+			}
+			rEvnt := bpfRecvfromEvnt{}
+			if err := binary.Read(bytes.NewBuffer(recRecvFrom.RawSample), binary.LittleEndian, &rEvnt); err != nil {
+				log.Printf("ERROR: read recvfrom event failed: %s \n", err.Error())
+				continue
+			}
+			// parsing and show recvfrom event
+			parseRecvfromEvent(&rEvnt)
+		}
 	}()
 
 	// wait for sigterm or sigkill, block main thread
@@ -141,14 +234,81 @@ func main() {
 	os.Exit(0)
 }
 
-// only use fmt.Printf here
+// only use fmt.Printf here, socket
 func parseSocketEvent(e *bpfSocketEvnt) {
 	parseCommon_socket(e)
 }
 
-// only use fmt.Printf here
+func parseCommon_socket(e *bpfSocketEvnt) {
+	ec := &EventCommon{
+		Pid:     e.Pid,
+		Ppid:    e.Ppid,
+		Uid:     e.Uid,
+		Comm:    e.Comm,
+		UtsName: e.UtsName,
+		Retval:  e.Retval,
+	}
+
+	fmt.Printf("%s [F:%s] [T:%s] [P:%s] \n", ec.ToString("SOCKET"), utils.ParseSocketFamily(e.Family),
+		utils.ParseSocketType(e.Type), utils.ParseSocketProtocol(e.Protocol))
+	return
+}
+
+// only use fmt.Printf here, connect
 func parseConnectEvent(e *bpfConnectEvnt) {
 	parseCommon_connect(e)
+}
+
+func parseCommon_connect(e *bpfConnectEvnt) {
+	ec := &EventCommon{
+		Pid:     e.Pid,
+		Ppid:    e.Ppid,
+		Uid:     e.Uid,
+		Comm:    e.Comm,
+		UtsName: e.UtsName,
+		Retval:  e.Retval,
+	}
+	fmt.Printf("%s [F:%s] [FD: %d] [R: %s:%d] \n", ec.ToString("CONNECT"), utils.ParseSocketFamily(e.Family),
+		e.Socketfd, utils.ParseConnectIPAddr(e.Raddr), e.Rport)
+	return
+}
+
+// only use fmt.Printf here, sendto
+func parseSendtoEvent(e *bpfSendtoEvnt) {
+	parseCommon_sendto(e)
+}
+
+func parseCommon_sendto(e *bpfSendtoEvnt) {
+	ec := &EventCommon{
+		Pid:     e.Pid,
+		Ppid:    e.Ppid,
+		Uid:     e.Uid,
+		Comm:    e.Comm,
+		UtsName: e.UtsName,
+		Retval:  e.Retval,
+	}
+	fmt.Printf("%s [F:%s] [R: %s:%d] \n", ec.ToString("SENDTO"), utils.ParseSocketFamily(e.Family),
+		utils.ParseConnectIPAddr(e.Raddr), e.Rport)
+	return
+}
+
+// only use fmt.Printf here, recvfrom
+func parseRecvfromEvent(e *bpfRecvfromEvnt) {
+	parseCommon_recvfrom(e)
+}
+
+func parseCommon_recvfrom(e *bpfRecvfromEvnt) {
+	ec := &EventCommon{
+		Pid:     e.Pid,
+		Ppid:    e.Ppid,
+		Uid:     e.Uid,
+		Comm:    e.Comm,
+		UtsName: e.UtsName,
+		Retval:  e.Retval,
+	}
+	fmt.Printf("%s [F:%s] [S: %s:%d] \n", ec.ToString("RECVFROM"), utils.ParseSocketFamily(e.Family),
+		utils.ParseConnectIPAddr(e.Saddr), e.Sport)
+	return
 }
 
 // internal parse
@@ -167,29 +327,4 @@ func (e *EventCommon) ToString(prefix string) string {
 	execTime := time.Now().UTC().Format(time.RFC3339)
 	return fmt.Sprintf("[%s] [%s] [%d (Parent: %d) %s] [%d @ %s] [Ret: %d]",
 		prefix, execTime, e.Pid, e.Ppid, exeName, e.Uid, utsName, e.Retval)
-}
-
-func parseCommon_socket(e *bpfSocketEvnt) {
-	ec := &EventCommon{}
-	ec.Pid = e.Pid
-	ec.Ppid = e.Ppid
-	ec.Uid = e.Uid
-	ec.Comm = e.Comm
-	ec.UtsName = e.UtsName
-	ec.Retval = e.Retval
-	fmt.Printf("%s [F:%s] [T:%s] [P:%s] \n", ec.ToString("SOCKET"), utils.ParseSocketFamily(e.Family), utils.ParseSocketType(e.Type), utils.ParseSocketProtocol(e.Protocol))
-	return
-}
-
-func parseCommon_connect(e *bpfConnectEvnt) {
-	ec := &EventCommon{}
-	ec.Pid = e.Pid
-	ec.Ppid = e.Ppid
-	ec.Uid = e.Uid
-	ec.Comm = e.Comm
-	ec.UtsName = e.UtsName
-	ec.Retval = e.Retval
-	fmt.Printf("%s [F:%s] [FD: %d] [R: %s:%d] \n", ec.ToString("CONNECT"), utils.ParseSocketFamily(e.Family),
-		e.Socketfd, utils.ParseConnectIPAddr(e.Raddr), e.Rport)
-	return
 }
