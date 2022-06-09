@@ -61,7 +61,7 @@ int tracepoint__syscalls__sys_enter_sendto(struct trace_event_raw_sys_enter *ctx
     }
 
     // sin
-    struct sockaddr_in *sin = (struct sockaddr_in *) (dest_addr->sa_data);
+    struct sockaddr_in *sin = (struct sockaddr_in *) (dest_addr);
     err = bpf_probe_read(&valEvnt->raddr, sizeof(sin->sin_addr.s_addr), &sin->sin_addr.s_addr);
     if (err) {
         bpf_printk("read sockaddr ipv4 address failed.\n");
@@ -146,7 +146,11 @@ int tracepoint__syscalls__sys_enter_recvfrom(struct trace_event_raw_sys_enter *c
 
     char *uts_name = BPF_CORE_READ(task, nsproxy, uts_ns, name.nodename);
     if (uts_name) {
-        bpf_probe_read(&valEvnt->uts_name, sizeof(valEvnt->uts_name), uts_name);
+        err = bpf_probe_read(&valEvnt->uts_name, sizeof(valEvnt->uts_name), uts_name);
+        if (err){
+            bpf_printk("read uts_name failed.\n");
+            return 0;
+        }
     }
 
     struct sockaddr *from_addr = (struct sockaddr *) ctx->args[4];
@@ -162,12 +166,13 @@ int tracepoint__syscalls__sys_enter_recvfrom(struct trace_event_raw_sys_enter *c
         return 0;
     }
     // record saddr
-    struct sockaddr_in *sin = (struct sockaddr_in *) (from_addr->sa_data);
+    struct sockaddr_in *sin = (struct sockaddr_in *) from_addr;
     err = bpf_probe_read(&valEvnt->saddr, sizeof(sin->sin_addr.s_addr), &sin->sin_addr.s_addr);
     if (err) {
         bpf_printk("read sockaddr ipv4 address failed.\n");
         return 0;
     }
+
     u32 sport = 0;
     err = bpf_probe_read(&sport, sizeof(sin->sin_port), &sin->sin_port);
     if (err) {
